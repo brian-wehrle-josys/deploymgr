@@ -1,4 +1,12 @@
+# Intro
+This is a mock up view of how the release tool can be extended to manange deployments of services.  This mock up is provided assuming that there is a backend that provides the data "data models" and the APIs to retrive this data for the UX ("view models")
+
+
 # Data Models (service)
+
+* PK - partition key
+* PKX - part of a composite key
+* SK  - sort ket
 
 ## Events Data Model
 * repo (PK1) 
@@ -21,7 +29,7 @@
 
 * repo (PK1)
 * env (PK2)
-* version (PK3 - SortKey)
+* version (Sk1 - SortKey)
 * startTimestamp
 * duration (calculated)
 * status
