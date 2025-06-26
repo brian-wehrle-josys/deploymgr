@@ -35,6 +35,7 @@ This is a mock up view of how the release tool can be extended to manange deploy
 * status
 * Url (calculated)
 * approvalUrl (calculated)
+* JiraTicket
 
 # View Models
 
@@ -48,5 +49,12 @@ Columns:
 * startTimestamp
 * duration (calculated)
 * status
+* JiraTicket
 * Url (calculated)
 * approvalUrl (calculated)
+
+
+# Questions:
+* Does a deployment event in the upper environments create a release Item each time a ticket is deployed?
+  * What if there are multiple tickets for a single day?
+  * Should the deployments change the state of the release (instead of the ticket state)?

@@ -278,12 +278,12 @@ export const DeploymentTable: React.FC<DeploymentTableProps> = ({ repos, environ
                     <div className="inline-block relative">
                     <button 
                     onClick={() => alert("RUNNING PROMOTE")}
-                    data-tooltip-target={deployment.deploymentId}
+                    data-tooltip-target={"tt" + deployment.deploymentId}
                     className="text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
                     >
                       Promote
                     </button>
-                    <div id={deployment.deploymentId} role="tooltip" className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+                    <div id={"tt" + deployment.deploymentId} role="tooltip" className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
                         Promote this deployment to {getPromoEnv(deployment)} environment  
                         <div className="tooltip-arrow" data-popper-arrow></div>
                       </div>
