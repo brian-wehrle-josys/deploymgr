@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export type DeploymentStatus = 'pending-approval' | 'in-progress' | 'completed' | 'failed' | 'testing';
 
@@ -14,16 +14,16 @@ export interface DeploymentEvents {
   approvalUrl?: string; // Optional URL for approval (if pending)
 }
 
-export interface Deployment {
+export interface ServiceDeployment {
   repo: string;
   version: string;
   environment: string;
   status: DeploymentStatus;
   deployedBy: string;
-  timestamp: Date; // Timestamp of the last deployment event
   startedTimestamp: Date; // Timestamp when the deployment started
   deploymentId: string; // Unique identifier for the deployment
   approvalUrl?: string; // Optional URL for approval (if pending)
+  elapsedTime?: string; // Optional elapsed time since deployment started
 }
 
 export const useDeploymentEvents = () => {
@@ -49,14 +49,14 @@ export const useDeploymentEvents = () => {
   return { events, setEvents };
 }
 
-export interface VersionDeploymentHistory {
+export interface ServiceVersionDeploymentHistory {
   repo: string;
   version: string;
   history: string[]; // ref to DeploymentState by environment
 }
 
 export const useVersionDeploymentHistory = () => {
-  const [versionHistory, setVersionHistory] = React.useState<VersionDeploymentHistory[]>([
+  const [versionHistory, setVersionHistory] = React.useState<ServiceVersionDeploymentHistory[]>([
     {
       repo: 'josys-src/alert-service',
       version: '1.1.0',
@@ -71,18 +71,18 @@ export const useVersionDeploymentHistory = () => {
   return { versionHistory, setVersionHistory };
 }
 
-export const useDeploymentState = () => {
+export const useServiceDeploymentState = () => {
   // Note: this is mock data organized by repo, and environment
   // This data is ordered by the environment, so the user sees 
-  const [deployments, setDeployments] = React.useState<Deployment[]>([
+  const [serviceDeploymentStatea, setServiceDeploymentState] = React.useState<ServiceDeployment[]>([
     {
       repo: 'josys-src/alert-service',
       environment: 'staging',
       version: '1.1.0',
       status: 'pending-approval',
       deployedBy: 'John Doe',
-      timestamp: new Date('2023-10-01T13:00:00Z'),
       startedTimestamp: new Date('2023-10-01T12:00:00Z'),
+      elapsedTime: "00:30:00",
       deploymentId: 'josys-src/alert-service/deployments/1',
       approvalUrl: 'https://github.com/josys-src/alert-service/issues/1',
     },
@@ -92,8 +92,8 @@ export const useDeploymentState = () => {
       version: '1.1.0',
       status: 'completed',
       deployedBy: 'John Doe',
-      timestamp: new Date('2023-10-01T13:00:00Z'),
       startedTimestamp: new Date('2023-10-01T12:00:00Z'),
+      elapsedTime: "00:30:00",
       deploymentId: 'josys-src/alert-service/deployments/2',
     },
     {
@@ -102,13 +102,13 @@ export const useDeploymentState = () => {
       version: '1.2.0',
       status: 'completed',
       deployedBy: 'John Doe',
-      timestamp: new Date('2023-10-01T13:00:00Z'),
       startedTimestamp: new Date('2023-10-01T12:00:00Z'),
+      elapsedTime: "00:30:00",
       deploymentId: 'josys-src/alert-service/deployments/3',
     },
   ]);
 
-  return { deployments, setDeployments };
+  return { serviceDeploymentState: serviceDeploymentStatea, setDeployments: setServiceDeploymentState };
 }
 
 const StatusBadge: React.FC<{ status: DeploymentStatus }> = ({ status }) => {
@@ -179,19 +179,18 @@ const DeploymentEventsList: React.FC<{ deploymentId: string }> = ({ deploymentId
 };
 
 export const DeploymentTable: React.FC<DeploymentTableProps> = ({ repos, environment }) => {
-  const { deployments } = useDeploymentState();
+  const { serviceDeploymentState: deployments } = useServiceDeploymentState();
   const [deploymentIdWithDetails, setShowDeploymentDetails] = useState<string | null>(null);
+  const { versionHistory } = useVersionDeploymentHistory();
+  const [_, setCurrentTime] = useState<Date>(new Date());
 
-  const formatDate = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-  };
+  // Update the current time every minute to refresh the elapsed time
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Filter deployments based on selected repos and environment
   const filteredDeployments = deployments.filter(deployment => {
@@ -209,11 +208,15 @@ export const DeploymentTable: React.FC<DeploymentTableProps> = ({ repos, environ
     }
   };
 
-  const getPromoEnv = (deployment: Deployment) => {
-    // Returns true if the environment is a production-like environment
-    for (const historyState of useVersionDeploymentHistory().versionHistory) {
-      if (historyState.version === deployment.version && historyState.repo === deployment.repo) {
-        const lastEnv = historyState.history[historyState.history.length - 1];
+  const getVersionHistory = (deployment: ServiceDeployment) => {
+    // Returns the version history for the given deployment
+    return versionHistory.find(history => history.repo === deployment.repo && history.version === deployment.version);
+  }
+
+  const getPromoEnv = (deployment: ServiceDeployment, serviceVersionHistoryArr: ServiceVersionDeploymentHistory[]) => {
+    for (const version of serviceVersionHistoryArr) {
+      if (version.version === deployment.version && version.repo === deployment.repo) {
+        const lastEnv = version.history[version.history.length - 1];
         if (lastEnv === 'development') {
           return "staging";
         } else if (lastEnv === 'staging') {
@@ -239,7 +242,8 @@ export const DeploymentTable: React.FC<DeploymentTableProps> = ({ repos, environ
             <th className="px-6 py-3">Environment</th>
             <th className="px-6 py-3">Deployed Version</th>
             <th className="px-6 py-3">Status</th>
-            <th className="px-6 py-3">Date/Time</th>
+            <th className="px-6 py-3">Started</th>
+            <th className="px-6 py-3">Elapsed</th>
             <th className="px-6 py-3">By</th>
             <th className="px-6 py-3">Actions</th>
             <th className="px-6 py-3">Details</th>
@@ -259,8 +263,19 @@ export const DeploymentTable: React.FC<DeploymentTableProps> = ({ repos, environ
                 <td className="px-6 py-4">
                   <StatusBadge status={deployment.status} />
                 </td>
-                <td className="px-6 py-4">
-                  {formatDate(deployment.timestamp)}
+                <td className="px-6 py-4 text-gray-500">
+                  {deployment.startedTimestamp.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'UTC',
+                    hour12: false,
+                  })}
+                </td>
+                <td className="px-6 py-4 text-gray-500">
+                  {deployment.elapsedTime}
                 </td>
                 <td className="px-6 py-4">{deployment.deployedBy}</td>
                 <td className="px-6 py-4">
@@ -274,7 +289,7 @@ export const DeploymentTable: React.FC<DeploymentTableProps> = ({ repos, environ
                       Approve
                     </a>
                   )}
-                  { deployment.status === 'completed' && getPromoEnv(deployment) && (
+                  { deployment.status === 'completed' && getPromoEnv(deployment, versionHistory) && (
                     <div className="inline-block relative">
                     <button 
                     onClick={() => alert("RUNNING PROMOTE")}
@@ -284,7 +299,7 @@ export const DeploymentTable: React.FC<DeploymentTableProps> = ({ repos, environ
                       Promote
                     </button>
                     <div id={"tt" + deployment.deploymentId} role="tooltip" className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
-                        Promote this deployment to {getPromoEnv(deployment)} environment  
+                        Promote this deployment to {getPromoEnv(deployment, versionHistory)} environment  
                         <div className="tooltip-arrow" data-popper-arrow></div>
                       </div>
                     </div>
