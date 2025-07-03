@@ -115,7 +115,7 @@ const Selector: React.FC<SelectorProps> = ({ onSelectionChange }) => {
           </select>
         </div>
 
-        <div>
+        {/* <div>
           <label htmlFor="env-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Environment
           </label>
@@ -132,7 +132,7 @@ const Selector: React.FC<SelectorProps> = ({ onSelectionChange }) => {
               </option>
             ))}
           </select>
-        </div>
+        </div> */}
       </div>
     </div>
   );
